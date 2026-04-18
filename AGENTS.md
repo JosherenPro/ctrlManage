@@ -25,7 +25,9 @@
 | Backend | NestJS, Prisma |
 | Base de données | PostgreSQL via Supabase |
 | Authentification | Supabase Auth + JWT |
-| Déploiement | Vercel, Docker, GitHub Actions |
+| Base de données | PostgreSQL via Neon (cloud) |
+| Cache/Redis | Upstash (gratuit) |
+| Déploiement | Vercel (frontend), Render (backend, free tier), GitHub Actions |
 
 ---
 
@@ -33,16 +35,42 @@
 
 ```
 ctrlManage/
-├── .github/workflows/ci.yml    # CI/CD
+├── .github/workflows/ci.yml    # CI/CD (GitHub Actions)
 ├── agents/                      # Définitions des agents IA
-├── backend/                     # API NestJS
+├── backend/                     # API NestJS (Dockerfile, railway.toml removed)
 ├── docs/                        # Documentation produit & architecture
-├── frontend/                    # Application Next.js
-├── infra/                       # Configuration Docker, déploiement
+├── frontend/                    # Application Next.js (vercel.json)
+├── infra/                       # Configuration Docker, Nginx, déploiement
 ├── prisma/                      # Schéma et migrations
+├── render.yaml                  # Blueprint Render (backend + Redis)
 ├── skills/                      # Compétences métier documentées
 └── tests/                       # Tests E2E et intégration
 ```
+
+---
+
+## Infrastructure de Déploiement
+
+### Services Gratuits
+
+| Service | Usage | Tier |
+|---------|-------|------|
+| **Vercel** | Frontend Next.js | Free (100h build/mois) |
+| **Render** | Backend NestJS + Redis | Free (500h/mois, dort après 15min) |
+| **Neon** | PostgreSQL | Free (0.5GB stocké) |
+| **GitHub Actions** | CI/CD | Free (2000min/mois) |
+
+### URLs de Production
+
+- Frontend : `https://ctrlmanage.vercel.app`
+- Backend API : `https://ctrlmanage-backend.onrender.com/api`
+
+### Fichiers de Déploiement
+
+- `frontend/vercel.json` — Config Vercel
+- `backend/Dockerfile` — Image Docker pour Render
+- `render.yaml` — Blueprint Render (web service + Redis)
+- `infra/DEPLOY.md` — Guide de déploiement détaillé
 
 ---
 
