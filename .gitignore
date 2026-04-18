@@ -17,6 +17,8 @@ coverage/
 .env.local
 .env.production
 .env.*.local
+.env.backend
+.env.backend.example
 
 backend/.env
 backend/.env.local
