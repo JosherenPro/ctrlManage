@@ -26,23 +26,23 @@ export class AuthService {
     const hash = await bcrypt.hash(dto.password, 10);
     const studentRole = await this.prisma.role.findFirst({ where: { name: 'STUDENT' } });
 
-    const fullName = dto.fullName?.trim() || `${dto.firstName || ''} ${dto.lastName || ''}`.trim() || 'User';
+    const fullName = dto.fullName?.trim() || `${dto.firstName || ''} ${dto.lastName || ''}`.trim() || 'Utilisateur';
 
-    // Get or create default establishment
-    let establishment = await this.prisma.establishment.findFirst({ where: { code: 'DEFAULT' } });
+    // Get or create establishment
+    let establishment = await this.prisma.establishment.findFirst({ where: { code: 'IA_BIGDATA' } });
     if (!establishment) {
       establishment = await this.prisma.establishment.create({
-        data: { name: 'Default Establishment', code: 'DEFAULT' },
+        data: { name: 'Intelligence Artificielle et Big Data', code: 'IA_BIGDATA' },
       });
     }
 
-    // Get or create default class
+    // Get or create default class for IA & Big Data
     const defaultClass = await this.prisma.class.upsert({
-      where: { code: 'UNASSIGNED' },
-      update: { name: 'Classe non assignee', academicYear: new Date().getFullYear().toString() },
+      where: { code: 'IA_BD_DEFAULT' },
+      update: { name: 'Classe IA & Big Data', academicYear: new Date().getFullYear().toString() },
       create: {
-        code: 'UNASSIGNED',
-        name: 'Classe non assignee',
+        code: 'IA_BD_DEFAULT',
+        name: 'Classe IA & Big Data',
         academicYear: new Date().getFullYear().toString(),
         establishmentId: establishment.id,
       },
