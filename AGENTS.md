@@ -1,11 +1,11 @@
-# AGENTS.md - Résumé du Projet ctrlManage
+# AGENTS.md - Résumé du Projet IA & Big Data
 
 ## Vue d'ensemble
 
-**ctrlManage** est une plateforme de gestion académique orientée présence, cours et contrôle d'accès via QR code.
+**IA & Big Data** est une plateforme de gestion académique orientée présence, cours et contrôle d'accès via QR code, dédiée à la filière Intelligence Artificielle et Big Data.
 
 ### Objectifs
-- Centraliser la gestion des utilisateurs, cours et présences
+- Centraliser la gestion des utilisateurs, cours et présences pour la filière IA & Big Data
 - Réduire la fraude grâce aux QR codes sécurisés et temporaires
 - Accélérer le contrôle de présence
 - Fournir des données exploitables pour l'administration
@@ -14,6 +14,11 @@
 - **Admin** : paramétrage global, gestion des utilisateurs, supervision
 - **Professeur** : gestion des cours, création de sessions, validation des présences
 - **Étudiant** : authentification, scan QR, consultation de l'historique de présence
+
+### Établissement
+- **Nom** : Intelligence Artificielle et Big Data
+- **Code** : IA_BIGDATA
+- Toutes les données sont verrouillées sur cet établissement
 
 ---
 
