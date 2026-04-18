@@ -62,20 +62,19 @@ export default function LoginPage() {
       <section className="hidden lg:flex lg:w-[55%] flex-col justify-between p-10 relative z-10">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-cyan-500 text-lg font-black text-white shadow-glow-violet">
-            C
+            IA
           </div>
-          <span className="text-xl font-bold tracking-tight text-white">ctrlManage</span>
+          <span className="text-xl font-bold tracking-tight text-white">IA & Big Data</span>
         </div>
 
         <div className="max-w-lg space-y-8">
           <div>
-            <div className="page-kicker mb-4">Plateforme académique</div>
+            <div className="page-kicker mb-4">Intelligence Artificielle & Big Data</div>
             <h1 className="text-5xl font-extrabold leading-[1.1] tracking-tight text-white xl:text-6xl">
-              Présences, sessions & <span className="gradient-text">contrôle QR</span>
+              Gestion des <span className="gradient-text">présences</span>
             </h1>
             <p className="mt-5 text-lg leading-relaxed text-slate-400">
-              Une interface unifiée pour admin, professeur et étudiant. Scan instantané, tableaux de
-              bord en temps réel, accès gouvernés.
+              Plateforme dédiée aux étudiants et professeurs de la filière IA & Big Data. Scan QR, tableaux de bord, gestion des sessions.
             </p>
           </div>
 
@@ -109,7 +108,7 @@ export default function LoginPage() {
 
         <div className="flex items-center gap-2 text-xs text-slate-600">
           <Zap className="h-3.5 w-3.5" />
-          <span>ctrlManage v2 · Aurora Edition</span>
+          <span>IA & Big Data · v2</span>
         </div>
       </section>
 

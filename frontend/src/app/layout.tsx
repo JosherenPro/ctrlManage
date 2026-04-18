@@ -6,16 +6,16 @@ import { AuthProvider } from '@/lib/auth-context';
 
 export const metadata: Metadata = {
   title: {
-    default: 'ctrlManage',
-    template: '%s · ctrlManage',
+    default: 'IA & Big Data',
+    template: '%s · IA & Big Data',
   },
-  description: 'Plateforme académique intelligente — présence, sessions et contrôle QR.',
+  description: 'Plateforme de gestion académique — Intelligence Artificielle et Big Data.',
   icons: { icon: '/favicon.ico' },
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'ctrlManage',
+    title: 'IA & Big Data',
   },
 };
 

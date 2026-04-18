@@ -88,13 +88,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             href="/dashboard"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-cyan-500 text-sm font-black text-white shadow-glow-violet transition-transform hover:scale-105"
           >
-            C
+            IA
           </Link>
           {!collapsed && (
             <div className="min-w-0 animate-fade-in">
-              <div className="text-sm font-bold tracking-tight text-white">ctrlManage</div>
+              <div className="text-sm font-bold tracking-tight text-white">IA & Big Data</div>
               <div className="text-[0.6rem] uppercase tracking-[0.2em] text-slate-600">
-                Gestion campus
+                Présences
               </div>
             </div>
           )}
@@ -236,7 +236,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               Espace de travail
             </div>
             <h1 className="truncate text-base font-semibold text-white">
-              {activeItem?.label || 'ctrlManage'}
+              {activeItem?.label || 'IA & Big Data'}
             </h1>
           </div>
           <div className="flex items-center gap-3">
