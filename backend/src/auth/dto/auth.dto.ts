@@ -25,30 +25,30 @@ export class RegisterDto {
   @Matches(/(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/, { message: 'Password must contain at least one special character' })
   password!: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  firstName!: string;
+  firstName?: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  lastName!: string;
+  lastName?: string;
 
-  @ApiProperty({ description: 'Student card number / matricule' })
-  @IsString()
-  @IsNotEmpty()
-  studentNumber!: string;
-
-  @ApiProperty({ description: 'Program / filiere' })
-  @IsString()
-  @IsNotEmpty()
-  program!: string;
-
-  @ApiProperty({ required: false, description: 'Backward-compatible full name field' })
+  @ApiProperty({ required: false, description: 'Full name (used if firstName/lastName not provided)' })
   @IsOptional()
   @IsString()
   fullName?: string;
+
+  @ApiProperty({ required: false, description: 'Student card number / matricule' })
+  @IsOptional()
+  @IsString()
+  studentNumber?: string;
+
+  @ApiProperty({ required: false, description: 'Program / filiere' })
+  @IsOptional()
+  @IsString()
+  program?: string;
 }
 
 export class UserResponseDto {

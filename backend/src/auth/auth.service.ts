@@ -16,17 +16,27 @@ export class AuthService {
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (existing) throw new ConflictException('Email already exists');
 
-    const existingStudentNumber = await this.prisma.student.findUnique({
-      where: { studentNumber: dto.studentNumber },
-    });
-    if (existingStudentNumber) throw new ConflictException('Student card number already exists');
+    if (dto.studentNumber) {
+      const existingStudentNumber = await this.prisma.student.findUnique({
+        where: { studentNumber: dto.studentNumber },
+      });
+      if (existingStudentNumber) throw new ConflictException('Student card number already exists');
+    }
 
     const hash = await bcrypt.hash(dto.password, 10);
     const studentRole = await this.prisma.role.findFirst({ where: { name: 'STUDENT' } });
 
-    const fullName = dto.fullName?.trim() || `${dto.firstName} ${dto.lastName}`.trim();
+    const fullName = dto.fullName?.trim() || `${dto.firstName || ''} ${dto.lastName || ''}`.trim() || 'User';
 
-    // Student requires a class relation in the current schema.
+    // Get or create default establishment
+    let establishment = await this.prisma.establishment.findFirst({ where: { code: 'DEFAULT' } });
+    if (!establishment) {
+      establishment = await this.prisma.establishment.create({
+        data: { name: 'Default Establishment', code: 'DEFAULT' },
+      });
+    }
+
+    // Get or create default class
     const defaultClass = await this.prisma.class.upsert({
       where: { code: 'UNASSIGNED' },
       update: { name: 'Classe non assignee', academicYear: new Date().getFullYear().toString() },
@@ -34,7 +44,7 @@ export class AuthService {
         code: 'UNASSIGNED',
         name: 'Classe non assignee',
         academicYear: new Date().getFullYear().toString(),
-        establishmentId: 'default-establishment',
+        establishmentId: establishment.id,
       },
     });
 
@@ -47,19 +57,21 @@ export class AuthService {
         status: 'ACTIVE',
         roleId:
           studentRole?.id ?? (await this.prisma.role.create({ data: { name: 'STUDENT' } })).id,
-        establishmentId: defaultClass.establishmentId,
+        establishmentId: establishment.id,
       },
     });
 
-    await this.prisma.student.create({
-      data: {
-        userId: user.id,
-        studentNumber: dto.studentNumber,
-        program: dto.program,
-        classId: defaultClass.id,
-        establishmentId: defaultClass.establishmentId,
-      },
-    });
+    if (dto.studentNumber) {
+      await this.prisma.student.create({
+        data: {
+          userId: user.id,
+          studentNumber: dto.studentNumber,
+          program: dto.program,
+          classId: defaultClass.id,
+          establishmentId: establishment.id,
+        },
+      });
+    }
     const payload = { sub: user.id, email: user.email, role: studentRole?.name ?? 'STUDENT', establishmentId: user.establishmentId };
 
     const userWithProfile = await this.prisma.user.findUnique({
