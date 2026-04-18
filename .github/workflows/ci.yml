@@ -248,14 +248,11 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to Railway
-        uses: vectordotdev/railway-action@v1
+      - name: Deploy to Render
+        uses: renderDeploy/action@v0
         with:
-          token: ${{ secrets.RAILWAY_TOKEN }}
-          project: ${{ secrets.RAILWAY_PROJECT_ID }}
-          service: backend
-          environment: production
-          wait: true
+          apiKey: ${{ secrets.RENDER_API_KEY }}
+          serviceIds: ${{ secrets.RENDER_SERVICE_IDS }}
 
   # ============================================
   # NOTIFICATION
