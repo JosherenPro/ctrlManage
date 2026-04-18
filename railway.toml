@@ -1,0 +1,21 @@
+[railway]
+validator = "toml"
+builder = "nixpacks"
+
+[build]
+builder = "nixpacks"
+buildCommand = "cd backend && npm run build"
+
+[start]
+parser = "nixpacks"
+startCommand = "cd backend && npm run start:prod"
+
+[deploy]
+healthcheckPath = "/api/health"
+healthcheckTimeout = "30s"
+restartPolicyType = "on-failure"
+restartPolicyMaxRetries = "10"
+
+[variables]
+NODE_ENV = "production"
+PORT = "3001"

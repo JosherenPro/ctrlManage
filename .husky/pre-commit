@@ -1,0 +1,26 @@
+# Husky Configuration
+# Ce fichier configure les hooks Git pre-commit
+
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit checks..."
+
+# Check backend
+if git diff --cached --name-only | grep -q "^backend/"; then
+  echo "🧪 Checking backend..."
+  cd backend
+  npm run lint || exit 1
+  npm run format:check || exit 1
+fi
+
+# Check frontend  
+if git diff --cached --name-only | grep -q "^frontend/"; then
+  echo "🎨 Checking frontend..."
+  cd frontend
+  npm run lint || exit 1
+  npm run format:check || exit 1
+  npm run type-check || exit 1
+fi
+
+echo "✅ All checks passed!"

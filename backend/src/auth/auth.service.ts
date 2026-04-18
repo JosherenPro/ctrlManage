@@ -1,0 +1,97 @@
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
+import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { excludePassword } from '../common/utils/exclude-password.util';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
+
+  async register(dto: RegisterDto) {
+    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (existing) throw new ConflictException('Email already exists');
+
+    const existingStudentNumber = await this.prisma.student.findUnique({
+      where: { studentNumber: dto.studentNumber },
+    });
+    if (existingStudentNumber) throw new ConflictException('Student card number already exists');
+
+    const hash = await bcrypt.hash(dto.password, 10);
+    const studentRole = await this.prisma.role.findFirst({ where: { name: 'STUDENT' } });
+
+    const fullName = dto.fullName?.trim() || `${dto.firstName} ${dto.lastName}`.trim();
+
+    // Student requires a class relation in the current schema.
+    const defaultClass = await this.prisma.class.upsert({
+      where: { code: 'UNASSIGNED' },
+      update: { name: 'Classe non assignee', academicYear: new Date().getFullYear().toString() },
+      create: {
+        code: 'UNASSIGNED',
+        name: 'Classe non assignee',
+        academicYear: new Date().getFullYear().toString(),
+        establishmentId: 'default-establishment',
+      },
+    });
+
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        fullName,
+        passwordHash: hash,
+        authProvider: 'local',
+        status: 'ACTIVE',
+        roleId:
+          studentRole?.id ?? (await this.prisma.role.create({ data: { name: 'STUDENT' } })).id,
+        establishmentId: defaultClass.establishmentId,
+      },
+    });
+
+    await this.prisma.student.create({
+      data: {
+        userId: user.id,
+        studentNumber: dto.studentNumber,
+        program: dto.program,
+        classId: defaultClass.id,
+        establishmentId: defaultClass.establishmentId,
+      },
+    });
+    const payload = { sub: user.id, email: user.email, role: studentRole?.name ?? 'STUDENT', establishmentId: user.establishmentId };
+
+    const userWithProfile = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: { role: true, studentProfile: true, teacherProfile: true },
+    });
+
+    return { accessToken: this.jwtService.sign(payload), user: excludePassword(userWithProfile!) };
+  }
+
+  async login(dto: LoginDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      include: { role: true, studentProfile: true, teacherProfile: true },
+    });
+    if (!user || user.status === 'SUSPENDED')
+      throw new UnauthorizedException('Invalid credentials');
+    if (user.passwordHash) {
+      const valid = await bcrypt.compare(dto.password, user.passwordHash);
+      if (!valid) throw new UnauthorizedException('Invalid credentials');
+    } else {
+      throw new UnauthorizedException('Use external auth provider');
+    }
+    const payload = { sub: user.id, email: user.email, role: user.role?.name, establishmentId: user.establishmentId };
+    return { accessToken: this.jwtService.sign(payload), user: excludePassword(user) };
+  }
+
+  async validateUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { role: true, studentProfile: true, teacherProfile: true },
+    });
+    return user ? excludePassword(user) : null;
+  }
+}

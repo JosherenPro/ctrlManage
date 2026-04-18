@@ -1,0 +1,276 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  NODE_VERSION: '20'
+  CODECOV_FLAGS: ''
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'prisma/**'
+              - 'package*.json'
+            frontend:
+              - 'frontend/**'
+              - 'package*.json'
+
+  # ============================================
+  # BACKEND JOBS
+  # ============================================
+  backend-lint:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install dependencies
+        run: cd backend && npm ci
+      - name: Run ESLint
+        run: cd backend && npm run lint
+      - name: Check formatting
+        run: cd backend && npm run format:check
+
+  backend-test:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: ctrlmanage_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ctrlmanage_test?schema=public
+      JWT_SECRET: test-secret-for-ci-only-${{ github.run_id }}
+      JWT_EXPIRES_IN: 1h
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install dependencies
+        run: cd backend && npm ci
+      - name: Generate Prisma client
+        run: cd backend && npx prisma generate
+      - name: Run database migrations
+        run: cd backend && npx prisma migrate deploy
+      - name: Run unit tests
+        run: cd backend && npm run test
+      - name: Run tests with coverage
+        run: cd backend && npm run test:cov
+        if: always()
+      - name: Run E2E tests
+        run: cd backend && npm run test:e2e
+        if: always()
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./backend/coverage/lcov.info
+          flags: backend
+          fail_ci_if_error: false
+
+  # ============================================
+  # FRONTEND JOBS
+  # ============================================
+  frontend-lint:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: cd frontend && npm ci
+      - name: Run ESLint
+        run: cd frontend && npm run lint
+      - name: Check formatting
+        run: cd frontend && npm run format:check
+      - name: TypeScript check
+        run: cd frontend && npm run type-check
+
+  frontend-build:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: cd frontend && npm ci
+      - name: Build application
+        run: cd frontend && npm run build
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/.next
+          retention-days: 7
+
+  # ============================================
+  # SECURITY JOBS
+  # ============================================
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Run npm audit - Backend
+        run: cd backend && npm audit --audit-level=high
+      - name: Run npm audit - Frontend
+        run: cd frontend && npm audit --audit-level=high
+
+  security-codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: 'typescript'
+          queries: 'security-extended'
+      - uses: github/codeql-action/analyze@v3
+
+  # ============================================
+  # VALIDATION JOBS
+  # ============================================
+  validate-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate documentation structure
+        run: |
+          test -f README.md
+          test -f docs/requirements.md
+          test -f docs/user_stories.md
+          test -f docs/architecture.md
+          test -f docs/database_schema.md
+          test -f docs/security.md
+          test -f prisma/schema.prisma
+          test -f .github/workflows/ci.yml
+          test -f Dockerfile
+      - name: Validate directory structure
+        run: |
+          test -d agents
+          test -d skills
+          test -d frontend
+          test -d backend
+          test -d infra
+          test -d tests
+      - name: Validate backend modules
+        run: |
+          test -d backend/src/auth
+          test -d backend/src/users
+          test -d backend/src/courses
+          test -d backend/src/sessions
+          test -d backend/src/attendance
+          test -d backend/src/reports
+          test -d backend/src/students
+      - name: Validate frontend routes
+        run: |
+          test -f frontend/src/app/login/page.tsx
+          test -d frontend/src/app/\(dashboard\)/dashboard
+          test -d frontend/src/app/\(dashboard\)/scan
+          test -d frontend/src/app/\(dashboard\)/courses
+
+  # ============================================
+  # DEPLOYMENT
+  # ============================================
+  deploy-frontend:
+    needs: [frontend-lint, frontend-build]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: "--prod"
+          working-directory: ./frontend
+
+  deploy-backend:
+    needs: [backend-lint, backend-test]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Railway
+        uses: vectordotdev/railway-action@v1
+        with:
+          token: ${{ secrets.RAILWAY_TOKEN }}
+          project: ${{ secrets.RAILWAY_PROJECT_ID }}
+          service: backend
+          environment: production
+          wait: true
+
+  # ============================================
+  # NOTIFICATION
+  # ============================================
+  notify-success:
+    needs: [backend-lint, backend-test, frontend-lint, frontend-build, validate-structure]
+    if: success() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Success notification
+        run: echo "✅ All checks passed!"
+
+  notify-failure:
+    needs: [backend-lint, backend-test, frontend-lint, frontend-build, validate-structure]
+    if: failure() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Failure notification
+        run: echo "❌ Some checks failed. Please review the logs."
