@@ -1,1 +1,232 @@
-/home/eren/Documents/ctrlmanage/prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+}
+
+enum SessionStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  JUSTIFIED
+}
+
+model Establishment {
+  id        String     @id @default(uuid())
+  name      String
+  code      String     @unique
+  address   String?
+  city      String?
+  country   String     @default("France")
+  logoUrl   String?
+  active    Boolean    @default(true)
+  users     User[]
+  classes   Class[]
+  courses   Course[]
+  sessions  Session[]
+  students  Student[]
+  teachers  Teacher[]
+  auditLogs AuditLog[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([code])
+  @@index([active])
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id                   String             @id @default(uuid())
+  email                String             @unique
+  fullName             String
+  passwordHash         String?
+  status               UserStatus         @default(INVITED)
+  authProvider         String?
+  roleId               String
+  role                 Role               @relation(fields: [roleId], references: [id])
+  establishmentId      String
+  establishment        Establishment      @relation(fields: [establishmentId], references: [id])
+  studentProfile       Student?
+  teacherProfile       Teacher?
+  auditLogs            AuditLog[]
+  validatedAttendances AttendanceRecord[] @relation("AttendanceValidatedBy")
+  issuedQrCodes        QrCode[]           @relation("QrCodeIssuedBy")
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([roleId])
+  @@index([status])
+  @@index([establishmentId])
+}
+
+model Class {
+  id              String        @id @default(uuid())
+  code            String        @unique
+  name            String
+  academicYear    String
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id])
+  students        Student[]
+  courses         Course[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([establishmentId])
+}
+
+model Student {
+  id                String             @id @default(uuid())
+  userId            String             @unique
+  studentNumber     String             @unique
+  program           String?
+  level             String?
+  classId           String
+  establishmentId   String
+  user              User               @relation(fields: [userId], references: [id])
+  class             Class              @relation(fields: [classId], references: [id])
+  establishment     Establishment      @relation(fields: [establishmentId], references: [id])
+  attendanceRecords AttendanceRecord[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([classId])
+  @@index([establishmentId])
+}
+
+model Teacher {
+  id              String        @id @default(uuid())
+  userId          String        @unique
+  employeeNumber  String        @unique
+  department      String?
+  establishmentId String
+  user            User          @relation(fields: [userId], references: [id])
+  establishment   Establishment @relation(fields: [establishmentId], references: [id])
+  courses         Course[]
+  sessions        Session[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([establishmentId])
+}
+
+model Course {
+  id              String        @id @default(uuid())
+  code            String        @unique
+  title           String
+  description     String?
+  classId         String
+  teacherId       String
+  establishmentId String
+  class           Class         @relation(fields: [classId], references: [id])
+  teacher         Teacher       @relation(fields: [teacherId], references: [id])
+  establishment   Establishment @relation(fields: [establishmentId], references: [id])
+  sessions        Session[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([classId])
+  @@index([teacherId])
+  @@index([establishmentId])
+}
+
+model Session {
+  id                String             @id @default(uuid())
+  courseId          String
+  teacherId         String
+  startsAt          DateTime
+  endsAt            DateTime
+  room              String?
+  status            SessionStatus      @default(DRAFT)
+  establishmentId   String
+  course            Course             @relation(fields: [courseId], references: [id])
+  teacher           Teacher            @relation(fields: [teacherId], references: [id])
+  establishment     Establishment      @relation(fields: [establishmentId], references: [id])
+  attendanceRecords AttendanceRecord[]
+  qrCodes           QrCode[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([courseId])
+  @@index([teacherId])
+  @@index([startsAt, endsAt])
+  @@index([establishmentId])
+}
+
+model AttendanceRecord {
+  id            String           @id @default(uuid())
+  sessionId     String
+  studentId     String
+  status        AttendanceStatus @default(PRESENT)
+  scannedAt     DateTime?
+  validatedAt   DateTime?
+  validatedById String?
+  notes         String?
+  session       Session          @relation(fields: [sessionId], references: [id])
+  student       Student          @relation(fields: [studentId], references: [id])
+  validatedBy   User?            @relation("AttendanceValidatedBy", fields: [validatedById], references: [id])
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@unique([sessionId, studentId])
+  @@index([studentId])
+  @@index([validatedById])
+  @@index([status])
+}
+
+model QrCode {
+  id         String    @id @default(uuid())
+  sessionId  String
+  token      String    @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  revokedAt  DateTime?
+  issuedById String?
+  session    Session   @relation(fields: [sessionId], references: [id])
+  issuedBy   User?     @relation("QrCodeIssuedBy", fields: [issuedById], references: [id])
+  createdAt  DateTime  @default(now())
+
+  @@index([sessionId])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id              String        @id @default(uuid())
+  actorId         String?
+  action          String
+  entityType      String
+  entityId        String?
+  metadata        Json?
+  establishmentId String
+  actor           User?         @relation(fields: [actorId], references: [id])
+  establishment   Establishment @relation(fields: [establishmentId], references: [id])
+  createdAt       DateTime      @default(now())
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([establishmentId])
+}
