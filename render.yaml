@@ -2,10 +2,11 @@ services:
   - type: web
     name: ctrlmanage-backend
     env: docker
-    dockerfilePath: backend/Dockerfile
+    dockerfilePath: ./Dockerfile
     region: frankfurt
     plan: free
     healthCheckPath: /api/health
+    rootDirectory: .
     envVars:
       - key: NODE_ENV
         value: production
@@ -18,10 +19,7 @@ services:
       - key: PORT
         value: 3001
       - key: FRONTEND_URL
-        fromService:
-          name: ctrlmanage-frontend
-          type: web
-          envVarKey: RENDER_EXTERNAL_URL
+        value: https://ctrlmanage.vercel.app
       - key: REDIS_URL
         fromService:
           name: ctrlmanage-redis
